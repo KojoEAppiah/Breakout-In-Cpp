@@ -50,6 +50,7 @@ struct Block
 {
     int x;
     int y;
+    int status;
     Block *next;
 };
 
@@ -76,7 +77,7 @@ int Map[MAPWIDTH][MAPHEIGHT+1]; //the game map!
 
 int paddle = MAPWIDTH/2;
 DWORD start_time;  //used in timing
-bool GAMESTARTED=false; //used by NewBlock()
+bool GAMEPAUSED=true; //used by NewBlock()
 
 //map for the program
 BitMapObject bmoMap;
@@ -109,6 +110,11 @@ LRESULT CALLBACK TheWindowProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			{
 				MovePaddle(1);
 				return(0);//handled message
+			}
+			else if(wParam==80) // P for pause
+			{
+				GAMEPAUSED = !GAMEPAUSED;
+				return(0);
 			}
 		}break;
 	case WM_DESTROY://the window is being destroyed
@@ -263,9 +269,8 @@ void GameDone()
 
 void GameLoop()
 {
-	if( (GetTickCount() - start_time) > 43)
+	if(!GAMEPAUSED && (GetTickCount() - start_time) > 52)
 	{
-		printf("tick");
 		MoveBall();
 		start_time=GetTickCount();
 	}
@@ -275,7 +280,7 @@ void GameLoop()
 void NewGame()
 {
 	start_time=GetTickCount();
-	GAMESTARTED=false;
+	GAMEPAUSED=false;
 
 	//srand(GetTickCount());
 	
@@ -313,6 +318,7 @@ void DrawBlock(int x,int y,int tile) //Put a block
     BitBlt(bmoMap,x*BLOCKWIDTH,y*BLOCKHEIGHT,BLOCKWIDTH,BLOCKHEIGHT,bmoBlocks,tile*BLOCKWIDTH,0 ,SRCAND);
     //then  image
     BitBlt(bmoMap,x*BLOCKWIDTH,y*BLOCKHEIGHT,BLOCKWIDTH,BLOCKHEIGHT,bmoBlocks,tile*BLOCKWIDTH,0,SRCPAINT);
+
 }
 
         
@@ -339,6 +345,7 @@ void DrawMap()//draw screen
     {
       current->x = xmy;
       current->y = 0;
+      current->status = 1;
       
       DrawBlock(current->x,current->y,0);
       
@@ -352,13 +359,29 @@ void DrawMap()//draw screen
     {
       current->x = xmy;
       current->y = 2;
-      
+      current->status = 1;
+
       DrawBlock(current->x,current->y,0);
       
       current->next = new Block;
       current = current->next;
       xmy++;
     }
+
+        xmy = 0; ymx = 0;
+    while(xmy<(MAPWIDTH*TILESIZE)/BLOCKWIDTH)
+    {
+      current->x = xmy;
+      current->y = 3;
+      current->status = 1;
+
+      DrawBlock(current->x,current->y,0);
+      
+      current->next = new Block;
+      current = current->next;
+      xmy++;
+    }
+
  	InvalidateRect(hWndMain,NULL,FALSE);
 }
 
@@ -439,49 +462,28 @@ void CollisionTest()
          if(newy< MAPHEIGHT)
          while(current!=NULL)
          {
-            if((newx*TILESIZE >= current->x*BLOCKWIDTH && newx*TILESIZE <= (current->x*BLOCKWIDTH)+BLOCKWIDTH)
-            && (newy*TILESIZE>=current->y*BLOCKHEIGHT && newy*TILESIZE<=(current->y*BLOCKHEIGHT)+BLOCKHEIGHT))
+            if(current->status > 0 && (newx*TILESIZE >= current->x*BLOCKWIDTH && newx*TILESIZE <= (current->x*BLOCKWIDTH)+BLOCKWIDTH)
+            && (newy*TILESIZE >= current->y*BLOCKHEIGHT && newy*TILESIZE <= (current->y*BLOCKHEIGHT)+BLOCKHEIGHT))
             {
-             if(newx*TILESIZE==current->x*BLOCKWIDTH || newx*TILESIZE==(current->x*BLOCKWIDTH)+BLOCKWIDTH
-             || ball.x*TILESIZE==(current->x*BLOCKWIDTH)+TILESIZE && ball.y*TILESIZE==(current->y*BLOCKHEIGHT)+TILESIZE
-             && ((newy*TILESIZE)+TILESIZE!=current->y*BLOCKHEIGHT || (newy*TILESIZE)-TILESIZE!=(current->y*BLOCKHEIGHT)+BLOCKHEIGHT
-             && ball.x*TILESIZE!=(current->x*BLOCKWIDTH)+TILESIZE))//ADD HERE
-             {
-          /*    Block *temp = head;
-              while(temp!=NULL)
-              { 
-               if((newy*TILESIZE)+TILESIZE==temp->y*BLOCKHEIGHT || (newy*TILESIZE)-TILESIZE==(temp->y*BLOCKHEIGHT)+BLOCKHEIGHT)
-               {
-                 DrawBlock(temp->x, temp->y, TILEGREY);
-                 Block *next = temp->next;
-                 delete temp;
-                 temp = next; 
-                 ball.yvelocity *= -1;
-               }
-               else
-                temp = temp->next;
-              }*/                
-              DrawBlock(current->x, current->y, TILEGREY);
-              Block *next = current->next;
-              delete current;
-              current = next; 
-              ball.xvelocity *= -1;
-             }
-             else
-             {
-              DrawBlock(current->x, current->y, TILEGREY);
-              Block *next = current->next;
-              delete current;
-              current = next; 
-              ball.yvelocity *= -1; 
-             } 
+             	DrawBlock(current->x, current->y, 1);
+              	current->status = 0;
+
+             	if((newx*TILESIZE==current->x*BLOCKWIDTH && ball.xvelocity > 0 || newx*TILESIZE==(current->x*BLOCKWIDTH)+BLOCKWIDTH  && ball.xvelocity < 0))
+             	//side hit
+	            	ball.xvelocity *= -1;
+
+	            else
+	       		//top/bottom hit
+        	    	ball.yvelocity *= -1; 
             }
-            else
-             current = current->next; 
+
+            current = current->next; 
          }   
             
-          if(newy >= MAPHEIGHT)
+          if(newy >= MAPHEIGHT){
+
             GameDone();
+        }
 }
 
 /*
