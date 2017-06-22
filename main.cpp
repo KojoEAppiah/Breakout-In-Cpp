@@ -30,6 +30,7 @@ const int TILEYELLOW=5;
 const int TILEWHITE=6;
 const int TILESTEEL=7;
 const int TILEPURPLE=8;
+const int TILEBALL=9;
 
 //Rectangular blocks require two sizes
 const int BLOCKWIDTH = 40;
@@ -264,6 +265,7 @@ void GameLoop()
 {
 	if( (GetTickCount() - start_time) > 43)
 	{
+		printf("tick");
 		MoveBall();
 		start_time=GetTickCount();
 	}
@@ -299,7 +301,7 @@ void NewGame()
 void DrawTile(int x,int y,int tile)//put a tile
 {
 	//mask first
-	BitBlt(bmoMap,x*TILESIZE,y*TILESIZE,TILESIZE,TILESIZE,bmoTiles,tile*TILESIZE,TILESIZE,SRCAND);
+	BitBlt(bmoMap,x*TILESIZE,y*TILESIZE,TILESIZE,TILESIZE,bmoTiles,tile*TILESIZE,0,SRCAND);
 	//then image
 	BitBlt(bmoMap,x*TILESIZE,y*TILESIZE,TILESIZE,TILESIZE,bmoTiles,tile*TILESIZE,0,SRCPAINT);
 }
@@ -363,11 +365,11 @@ void DrawMap()//draw screen
 
 void DrawBall(int x, int y)
 {
-	//draw moving ball
-    DrawTile(ball.x, ball.y, TILEBLACK);
-
     //fill in old ball space
     DrawTile(x, y, TILEGREY);
+
+	//draw moving ball
+    DrawTile(ball.x, ball.y, TILEBALL);
     
     InvalidateRect(hWndMain,NULL,FALSE);
 }
@@ -434,7 +436,7 @@ void CollisionTest()
             ball.yvelocity *= -1;
             
             current = head;
-         if(newy< MAPHEIGHT/2)
+         if(newy< MAPHEIGHT)
          while(current!=NULL)
          {
             if((newx*TILESIZE >= current->x*BLOCKWIDTH && newx*TILESIZE <= (current->x*BLOCKWIDTH)+BLOCKWIDTH)
@@ -479,8 +481,7 @@ void CollisionTest()
          }   
             
           if(newy >= MAPHEIGHT)
-            //NewGame();
-            ball.yvelocity *= -1;  
+            GameDone();
 }
 
 /*
